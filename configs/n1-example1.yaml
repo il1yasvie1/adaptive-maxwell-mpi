@@ -1,0 +1,23 @@
+name: n1-example1
+basic:
+  eg: "1"
+  degree: 1
+  mesh_backend: netgen
+initialization:
+  uniform_refinements: 1
+runs:
+  - id: n1-uniform
+    strategy: uniform
+    levels: 5
+    formulation: regularized
+  - id: n1-adaptive
+    strategy: adaptive
+    levels: 13
+    formulation: regularized
+    marking:
+      theta12: 0.5
+      theta3: 0.5
+regularization:
+  gamma0: 1024
+  n0: 144
+  mu: 0.3333333333333333

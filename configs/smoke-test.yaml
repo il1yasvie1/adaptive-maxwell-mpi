@@ -1,0 +1,55 @@
+name: smoke-test
+
+basic:
+  eg: "3"
+  degree: 1
+  mesh_backend: netgen
+
+initialization:
+  uniform_refinements: 1
+
+runs:
+  - id: uniform-regularized
+    strategy: uniform
+    levels: 1
+    formulation: regularized
+
+  - id: adaptive-regularized
+    strategy: adaptive
+    levels: 1
+    formulation: regularized
+    marking:
+      theta12: 0.3
+      theta3: 0.3
+
+  - id: uniform-mixed
+    strategy: uniform
+    levels: 1
+    formulation: mixed
+
+  - id: adaptive-mixed
+    strategy: adaptive
+    levels: 1
+    formulation: mixed
+    marking:
+      theta12: 0.3
+      theta3: 0.3
+
+regularization:
+  gamma0: 512
+  n0: 144
+  mu: 0.3333333333333333
+
+hcurl_errors:
+  - reference:
+      run: uniform-regularized
+      level: final
+    targets:
+      - run: uniform-regularized
+        levels: all
+      - run: adaptive-regularized
+        levels: all
+      - run: uniform-mixed
+        levels: all
+      - run: adaptive-mixed
+        levels: all

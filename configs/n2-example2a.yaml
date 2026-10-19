@@ -1,0 +1,23 @@
+name: n2-example2a
+basic:
+  eg: "2a"
+  degree: 2
+  mesh_backend: netgen
+initialization:
+  uniform_refinements: 2
+runs:
+  - id: n2-uniform
+    strategy: uniform
+    levels: 2
+    formulation: regularized
+  - id: n2-adaptive
+    strategy: adaptive
+    levels: 8
+    formulation: regularized
+    marking:
+      theta12: 0.3
+      theta3: 0.3
+regularization:
+  gamma0: 1.2349
+  n0: 384
+  mu: 0.3939
