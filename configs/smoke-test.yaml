@@ -1,4 +1,5 @@
 name: smoke-test
+version: new
 
 basic:
   eg: "3"
@@ -11,12 +12,12 @@ initialization:
 runs:
   - id: uniform-regularized
     strategy: uniform
-    levels: 1
+    levels: 2
     formulation: regularized
 
   - id: adaptive-regularized
     strategy: adaptive
-    levels: 1
+    levels: 2
     formulation: regularized
     marking:
       theta12: 0.3
@@ -24,12 +25,12 @@ runs:
 
   - id: uniform-mixed
     strategy: uniform
-    levels: 1
+    levels: 2
     formulation: mixed
 
   - id: adaptive-mixed
     strategy: adaptive
-    levels: 1
+    levels: 2
     formulation: mixed
     marking:
       theta12: 0.3

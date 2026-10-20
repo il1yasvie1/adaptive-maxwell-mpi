@@ -1,4 +1,5 @@
 name: n1-example3
+version: new
 
 basic:
   eg: "3"
@@ -11,7 +12,7 @@ initialization:
 runs:
   - id: n1-adaptive
     strategy: adaptive
-    levels: 8
+    levels: 5
     formulation: regularized
     marking:
       theta12: 0.5

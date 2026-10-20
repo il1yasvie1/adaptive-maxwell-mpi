@@ -144,11 +144,24 @@ def set_MixedProblem(
         "snes_monitor": None,
         "snes_converged_reason": None,
         "snes_error_if_not_converged": True,
-        "ksp_error_if_not_converged": True,
+
         "ksp_type": "preonly",
-        "pc_type": "lu",
-        "pc_factor_mat_solver_type": "mumps",
+        "ksp_error_if_not_converged": True,
+        "ksp_monitor": True,
+
+        "pc_type": "fieldsplit",
+        "pc_fieldsplit_detect_saddle_point": True,
+        "pc_fieldsplit_type": "gkb",
+        "pc_fieldsplit_gkb_nu": 1.0,
+        "pc_fieldsplit_gkb_tol": 1e-8,
+        "pc_fieldsplit_gkb_delay": 5,
+        "pc_fieldsplit_gkb_maxit": 200,
+
+        "fieldsplit_0_ksp_type": "preonly",
+        "fieldsplit_0_pc_type": "lu",
+        "fieldsplit_0_pc_factor_mat_solver_type": "mumps",
     }
+
     nonlinear_problem = petsc.NonlinearProblem(
         F,
         w,
@@ -164,10 +177,13 @@ def set_MixedProblem(
     ph = w.sub(1).collapse()
     uh.x.scatter_forward()
     ph.x.scatter_forward()
+    num_iterations = nonlinear_problem.solver.getLinearSolveIterations()
+    del nonlinear_problem
+    del w
     if return_iterations:
         return (
             uh,
             ph,
-            nonlinear_problem.solver.getLinearSolveIterations(),
+            num_iterations,
         )
     return uh, ph

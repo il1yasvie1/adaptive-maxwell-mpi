@@ -1,6 +1,7 @@
 """MPI-safe Dörfler marking for distributed DG0 indicators."""
 
 import numpy as np
+import dolfinx.mesh as mesh
 from mpi4py import MPI
 
 
@@ -74,7 +75,56 @@ def _distributed_mark(sq, theta, comm):
     return np.flatnonzero(marked).astype(np.int32)
 
 
-def mark(eta1, eta2, eta3, th12, th3):
+def _global_cell_keys(domain):
+    """Return local global IDs and partition-independent cell coordinates."""
+    index_map = domain.topology.index_map(domain.topology.dim)
+    local_cells = np.arange(index_map.size_local, dtype=np.int32)
+    local_ids = index_map.local_to_global(local_cells)
+    midpoints = mesh.compute_midpoints(
+        domain,
+        domain.topology.dim,
+        local_cells,
+    )
+    return local_ids, midpoints
+
+
+def _global_sort_mark(sq, theta, domain, cell_keys):
+    """Reproduce serial global sorting with partition-independent ties."""
+    comm = domain.comm
+    local_ids, midpoints = cell_keys
+    gathered_sq = comm.gather(np.asarray(sq, dtype=np.float64), root=0)
+    gathered_ids = comm.gather(local_ids, root=0)
+    gathered_midpoints = comm.gather(midpoints, root=0)
+
+    selected = None
+    if comm.rank == 0:
+        global_sq = np.concatenate(gathered_sq)
+        global_ids = np.concatenate(gathered_ids)
+        global_midpoints = np.concatenate(gathered_midpoints)
+        total = np.sum(global_sq)
+        if total <= 0 or theta <= 0:
+            selected = np.empty(0, dtype=np.int64)
+        else:
+            order = np.lexsort((
+                global_ids,
+                global_midpoints[:, 2],
+                global_midpoints[:, 1],
+                global_midpoints[:, 0],
+                -global_sq,
+            ))
+            cumulative = np.cumsum(global_sq[order])
+            count = np.searchsorted(
+                cumulative,
+                theta**2 * total,
+                side="left",
+            ) + 1
+            selected = global_ids[order[:count]]
+
+    selected = comm.bcast(selected, root=0)
+    return np.flatnonzero(np.isin(local_ids, selected)).astype(np.int32)
+
+
+def mark(eta1, eta2, eta3, th12, th3, version="old"):
     """Mark the union of the eta1/eta2 and eta3 Dörfler sets."""
     domain = eta1.function_space.mesh
     comm = domain.comm
@@ -91,19 +141,15 @@ def mark(eta1, eta2, eta3, th12, th3):
 
     sq3 = eta3.x.array[:num_owned_cells]**2
 
-    cells12 = _distributed_mark(
-        sq12,
-        th12,
-        comm,
-    )
+    if version == "new":
+        cell_keys = _global_cell_keys(domain)
+        cells12 = _global_sort_mark(sq12, th12, domain, cell_keys)
+        cells3 = _global_sort_mark(sq3, th3, domain, cell_keys)
+    else:
+        cells12 = _distributed_mark(sq12, th12, comm)
+        cells3 = _distributed_mark(sq3, th3, comm)
 
-    cells3 = _distributed_mark(
-        sq3,
-        th3,
-        comm,
-    )
-
-    return np.union1d(
+    return np.ascontiguousarray(np.union1d(
         cells12,
         cells3,
-    ).astype(np.int32)
+    ), dtype=np.int32).copy()

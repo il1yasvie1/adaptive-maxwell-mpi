@@ -1,5 +1,9 @@
 from pathlib import Path
 
+import pytest
+
+pytest.importorskip("ufl")
+
 from utils import RunPaths
 
 

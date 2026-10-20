@@ -6,6 +6,7 @@ stored solutions with a reference checkpoint.
 """
 
 from dataclasses import dataclass
+import gc
 import json
 import math
 from pathlib import Path
@@ -69,6 +70,8 @@ def _checkpoint_metadata(experiment, run, level, num_cells, gamma):
             "n0": experiment.n0,
             "mu": experiment.gamma_exponent,
         }
+    if experiment.version == "new":
+        metadata["algorithm_version"] = "new"
     return metadata
 
 
@@ -103,7 +106,7 @@ def _checkpoint_ready(paths, experiment, run, level):
         num_cells,
         experiment.gamma(num_cells, run.formulation),
     )
-    stored_gamma = stored.pop("gamma", None)
+    stored.pop("gamma", None)
     expected_gamma = expected.pop("gamma")
     return stored == expected and math.isclose(
         gamma,
@@ -143,7 +146,11 @@ def _problem_data(domain, experiment):
 def _result(domain, experiment, uh, ph, gamma, iterations, problem_data):
     alpha, f, g = problem_data
     eta1, eta2, eta3, estim_error = estimate(
-        domain, (uh, ph), (alpha, f, g), gamma
+        domain,
+        (uh, ph),
+        (alpha, f, g),
+        gamma,
+        experiment.version,
     )
     u_exact = exact_solution(domain, experiment.geometry_example)
     hcurl_error = None
@@ -186,7 +193,8 @@ def solve_level(domain, experiment, run, gamma_override=None):
     alpha, f, g = problem_data
 
     if run.is_regularized:
-        ph = set_LinearProblem(domain, g, experiment.degree).solve()
+        linear_problem = set_LinearProblem(domain, g, experiment.degree)
+        ph = linear_problem.solve()
         ph.x.scatter_forward()
         nonlinear_problem = set_NonlinearProblem(
             domain,
@@ -201,6 +209,8 @@ def solve_level(domain, experiment, run, gamma_override=None):
         num_iterations = (
             nonlinear_problem.solver.getLinearSolveIterations()
         )
+        del nonlinear_problem
+        del linear_problem
     else:
         uh, ph, num_iterations = set_MixedProblem(
             domain,
@@ -323,6 +333,7 @@ def run_refinement(experiment, run, paths):
             state.geo_model,
         )
         initial_solution = uh, ph
+        del domain, uh, ph
         PETSc.Sys.Print(f"{run.id} level 0: checkpoint found, skipped solve")
 
     data_rows = []
@@ -331,6 +342,7 @@ def run_refinement(experiment, run, paths):
             result = _result_from_solution(
                 state.domain, experiment, run, *initial_solution
             )
+            initial_solution = None
         elif _checkpoint_ready(paths, experiment, run, level):
             domain, uh, ph = _read_checkpoint(
                 paths.checkpoint(run.id, level),
@@ -345,6 +357,7 @@ def run_refinement(experiment, run, paths):
             result = _result_from_solution(
                 state.domain, experiment, run, uh, ph
             )
+            del domain, uh, ph
             PETSc.Sys.Print(
                 f"{run.id} level {level}: checkpoint found, skipped solve"
             )
@@ -362,6 +375,8 @@ def run_refinement(experiment, run, paths):
             f"estimator={result.estim_error:.6e}"
         )
         if level == run.levels:
+            del result
+            gc.collect()
             break
 
         cells = None
@@ -372,8 +387,15 @@ def run_refinement(experiment, run, paths):
                 result.eta3,
                 run.theta12,
                 run.theta3,
+                experiment.version,
             )
-        state = refine_mesh(state, cells)
+        del result
+        gc.collect()
+
+        old_state = state
+        state = refine_mesh(old_state, cells)
+        del old_state, cells
+        gc.collect()
 
 
 def compute_reference_errors(
@@ -485,6 +507,7 @@ def prepare(experiment, paths):
 def print_config(experiment, source):
     PETSc.Sys.Print(f"Configuration: {Path(source).resolve()}")
     PETSc.Sys.Print(f"Experiment: {experiment.name}")
+    PETSc.Sys.Print(f"Version: {experiment.version}")
     PETSc.Sys.Print(f"Mode: {experiment.mode}")
     PETSc.Sys.Print(
         f"Example={experiment.example}, degree={experiment.degree}, "
@@ -532,12 +555,17 @@ def main():
     prepare(experiment, paths)
 
     if args.command == "run" and experiment.mode == "gamma":
-        from gamma import find_optimal_gamma, gamma_scan
+        from gamma import adjoint_gamma_levels, find_optimal_gamma, gamma_scan
 
         for test in experiment.gamma_tests:
             run = experiment.run(test.run)
             output = paths.root / "gamma" / test.id
-            if experiment.geometry_example in (1, 2):
+            if test.method == "adjoint":
+                adjoint_gamma_levels(
+                    experiment, run, test.levels, test.values[0], test.values[-1],
+                    test.tolerance, output, paths.root
+                )
+            elif experiment.geometry_example in (1, 2):
                 find_optimal_gamma(
                     experiment, run, test.level, test.values, output, paths.root
                 )

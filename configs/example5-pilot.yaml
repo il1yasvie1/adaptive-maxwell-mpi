@@ -1,0 +1,28 @@
+name: example5-pilot
+
+basic:
+  eg: "5"
+  degree: 1
+  mesh_backend: netgen
+
+initialization:
+  uniform_refinements: 1
+
+runs:
+  - id: example5-uniform
+    strategy: uniform
+    levels: 4
+    formulation: regularized
+
+  - id: example5-adaptive
+    strategy: adaptive
+    levels: 10
+    formulation: regularized
+    marking:
+      theta12: 0.5
+      theta3: 0.5
+
+regularization:
+  gamma0: 0.66296
+  n0: 144
+  mu: 0.3333333333333333

@@ -32,6 +32,9 @@ class GammaTest:
     run: str
     level: int
     values: tuple[float, ...]
+    method: str = "scan"
+    levels: tuple[int, ...] = ()
+    tolerance: float = 1e-3
 
 
 @dataclass(frozen=True)
@@ -44,6 +47,7 @@ class HcurlErrorConfig:
 @dataclass(frozen=True)
 class ExperimentConfig:
     name: str
+    version: str
     mode: str
     example: str
     degree: int
@@ -84,6 +88,7 @@ class ExperimentConfig:
     def resolved_dict(self):
         payload = {
             "name": self.name,
+            "version": self.version,
             "mode": self.mode,
             "basic": {
                 "eg": self.example,
@@ -393,7 +398,17 @@ def _parse_gamma_tests(raw_tests, runs, mode):
         values = tuple(float(value) for value in raw_values)
         if not values or any(value <= 0 for value in values):
             raise ValueError("Gamma test values must be positive and non-empty.")
-        tests.append(GammaTest(test_id, run_id, level, values))
+        method = str(raw.get("method", "scan")).lower()
+        if method not in ("scan", "adjoint"):
+            raise ValueError("gamma test method must be scan or adjoint.")
+        levels = raw.get("levels", [level])
+        levels = tuple(int(item) for item in levels)
+        if any(item < 0 or item > run_map[run_id].levels for item in levels):
+            raise ValueError("Gamma test levels are outside the selected run.")
+        tolerance = float(raw.get("tolerance", 1e-3))
+        if tolerance <= 0:
+            raise ValueError("Gamma test tolerance must be positive.")
+        tests.append(GammaTest(test_id, run_id, level, values, method, levels, tolerance))
     return tuple(tests)
 
 
@@ -406,6 +421,10 @@ def load_config(path):
     name = str(raw.get("name", path.stem)).strip()
     if not name or "/" in name or "\\" in name or name in (".", ".."):
         raise ValueError("name must be a safe directory name.")
+
+    version = str(raw.get("version", "old")).lower()
+    if version not in ("old", "new"):
+        raise ValueError("version must be old or new.")
 
     mode = str(raw.get("mode", "solve")).lower()
     if mode not in ("solve", "gamma"):
@@ -463,6 +482,7 @@ def load_config(path):
     )
     return ExperimentConfig(
         name=name,
+        version=version,
         mode=mode,
         example=example,
         degree=degree,

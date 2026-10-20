@@ -33,7 +33,7 @@ def assemble_indicator(DG0, form):
     return eta
 
 
-def estimate(domain, sol, dat, gam):
+def estimate(domain, sol, dat, gam, version="old"):
     """Return (eta1, eta2, eta3, global_estimator).
 
     ``eta1`` measures the scalar auxiliary problem, ``eta2`` the divergence
@@ -50,24 +50,27 @@ def estimate(domain, sol, dat, gam):
     w = ufl.TestFunction(DG0)
 
     n = ufl.FacetNormal(domain)
-    h = ufl.CellDiameter(domain)
-    h_avg = (h("+") + h("-")) / 2
+    if version == "new":
+        h = ufl.CellVolume(domain) ** (1.0 / 3.0)
+        facet_weight = h("+") * w("+") + h("-") * w("-")
+    else:
+        h = ufl.CellDiameter(domain)
+        h_avg = (h("+") + h("-")) / 2
+        facet_weight = h_avg * w("+")
 
     r1 = ufl.div(ufl.grad(ph)) - g
     j1 = ufl.jump(ufl.grad(ph), n)
     G1 = (
         h**2 * r1**2 * w * ufl.dx
-        + h_avg * j1**2 * w("+") * ufl.dS
+        + j1**2 * facet_weight * ufl.dS
     )
 
-   
     r2 = ufl.div(ufl.grad(ph) - uh)
     j2 = ufl.jump(ufl.grad(ph) - uh, n)
     G2 = (
         h**2 * r2**2 * w * ufl.dx
-        + h_avg * j2**2 * w("+") * ufl.dS
+        + j2**2 * facet_weight * ufl.dS
     )
-
 
     r3 = (
         f
@@ -86,10 +89,7 @@ def estimate(domain, sol, dat, gam):
 
     G3 = (
         h**2 * ufl.inner(r3, r3) * w * ufl.dx
-        + h_avg
-        * ufl.inner(j3, j3)
-        * w("+")
-        * ufl.dS
+        + ufl.inner(j3, j3) * facet_weight * ufl.dS
     )
 
     eta1 = assemble_indicator(DG0, G1)

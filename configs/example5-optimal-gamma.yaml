@@ -1,0 +1,30 @@
+name: example5-optimal-gamma
+mode: gamma
+
+basic:
+  eg: "5"
+  degree: 1
+  mesh_backend: netgen
+
+initialization:
+  uniform_refinements: 1
+
+regularization:
+  gamma0: 512
+  n0: 144
+  mu: 0.3333333333333333
+
+runs:
+  - id: uniform-regularized
+    strategy: uniform
+    levels: 3
+    formulation: regularized
+
+gamma_tests:
+  - id: adjoint-uniform-levels
+    run: uniform-regularized
+    level: 0
+    levels: [0, 1, 2, 3]
+    method: adjoint
+    values: [0.1, 2048]
+    tolerance: 1.0e-3
