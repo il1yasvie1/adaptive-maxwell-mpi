@@ -13,6 +13,5 @@ dependencies:
   - adios4dolfinx
   - gmsh
   - netgen
-  - ngsolve
   - ngspetsc
   - pytest

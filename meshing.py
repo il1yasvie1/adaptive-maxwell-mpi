@@ -200,15 +200,10 @@ def _ensure_facet_ghosts(geo_model, domain):
         return domain
 
     raw = geo_model.ngmesh.Elements3D().NumPy()
-    if not np.all(raw["np"] == 4):
-        raise RuntimeError(
-            "MPI ghost reconstruction for Netgen currently requires tetrahedra."
-        )
-
-    order = np.argsort(raw["np"])
+    nodes, order = _tetrahedral_nodes_and_order(raw)
     geo_model._sorted_mapping = order
     if comm.rank == geo_model.comm_rank:
-        cells = np.asarray(raw["nodes"][order, :4], dtype=np.int64) - 1
+        cells = np.asarray(nodes[order, :4], dtype=np.int64) - 1
         permutation = dolfinx.cpp.io.perm_vtk(
             mesh.CellType.tetrahedron,
             4,
@@ -233,3 +228,32 @@ def _ensure_facet_ghosts(geo_model, domain):
     )
     geo_model._mesh = domain
     return domain
+
+
+def _tetrahedral_nodes_and_order(raw):
+    """Extract tetrahedron nodes from Netgen 6.2.2607 and newer arrays."""
+    fields = raw.dtype.names
+    if fields is None or "nodes" not in fields:
+        raise RuntimeError(
+            "Unsupported Netgen Elements3D NumPy layout: "
+            f"expected a structured array with a 'nodes' field, got {fields}."
+        )
+
+    nodes = np.asarray(raw["nodes"])
+    if nodes.ndim != 2:
+        raise RuntimeError(
+            "Unsupported Netgen node array: "
+            f"expected two dimensions, got shape {nodes.shape}."
+        )
+
+    # Netgen node numbers are 1-based and unused columns are zero-padded.
+    # The explicit ``np`` field was removed in netgen-mesher 6.2.2608.
+    num_points = np.count_nonzero(nodes, axis=1)
+    if not np.all(num_points == 4):
+        raise RuntimeError(
+            "MPI ghost reconstruction for Netgen currently requires "
+            "tetrahedra; detected nodes per cell: "
+            f"{np.unique(num_points).tolist()}."
+        )
+
+    return nodes, np.argsort(num_points, kind="stable")

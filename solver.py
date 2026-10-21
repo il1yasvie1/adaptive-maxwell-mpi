@@ -143,14 +143,14 @@ def set_MixedProblem(
         "snes_max_it": 50,
         "snes_monitor": None,
         "snes_converged_reason": None,
-        "snes_error_if_not_converged": True,
+        "snes_error_if_not_converged": None,
 
         "ksp_type": "preonly",
-        "ksp_error_if_not_converged": True,
-        "ksp_monitor": True,
+        "ksp_error_if_not_converged": None,
+        "ksp_monitor": None,
 
         "pc_type": "fieldsplit",
-        "pc_fieldsplit_detect_saddle_point": True,
+        "pc_fieldsplit_detect_saddle_point": None,
         "pc_fieldsplit_type": "gkb",
         "pc_fieldsplit_gkb_nu": 1.0,
         "pc_fieldsplit_gkb_tol": 1e-8,
