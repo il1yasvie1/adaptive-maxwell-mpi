@@ -1,0 +1,39 @@
+name: n1-example3-v1
+version: new
+
+basic:
+  eg: "3"
+  degree: 1
+  mesh_backend: netgen
+
+initialization:
+  uniform_refinements: 1
+
+runs:
+  - id: n1-uniform-v1
+    strategy: uniform
+    levels: 3
+    formulation: regularized
+
+  - id: n1-adaptive-v1
+    strategy: adaptive
+    levels: 3
+    formulation: regularized
+    marking:
+      theta12: 0.3
+      theta3: 0.3
+
+regularization:
+  gamma0: 512
+  n0: 192
+  mu: 0.3333333333333333
+
+hcurl_errors:
+  - reference:
+      run: n1-uniform-v1
+      level: final
+    targets:
+      - run: n1-uniform-v1
+        levels: all
+      - run: n1-adaptive-v1
+        levels: all

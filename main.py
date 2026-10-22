@@ -26,8 +26,10 @@ from utils import (
     RunPaths,
     append_csv_log,
     calc_hcurl_error,
+    calc_hcurl_norm,
     init_csv_log,
     update_data_hcurl_error,
+    update_data_relative_hcurl_error,
     update_csv_log,
     vtx_write,
     write_data_csv,
@@ -45,6 +47,7 @@ class LevelResult:
     num_iterations: int
     estim_error: float
     hcurl_error: float | None
+    rel_hcurl_error: float | None
 
 
 def _checkpoint_metadata(experiment, run, level, num_cells, gamma):
@@ -154,14 +157,21 @@ def _result(domain, experiment, uh, ph, gamma, iterations, problem_data):
     )
     u_exact = exact_solution(domain, experiment.geometry_example)
     hcurl_error = None
+    rel_hcurl_error = None
     if u_exact is not None:
+        curl_exact = exact_curl(domain, experiment.geometry_example)
         hcurl_error = calc_hcurl_error(
             u_exact,
             uh,
-            curl_u=exact_curl(domain, experiment.geometry_example),
+            curl_u=curl_exact,
         )
+        exact_norm = calc_hcurl_norm(u_exact, curl_u=curl_exact)
+        if exact_norm == 0.0:
+            raise ValueError("Exact solution has zero H(curl) norm.")
+        rel_hcurl_error = hcurl_error / exact_norm
     return LevelResult(
-        uh, ph, eta1, eta2, eta3, gamma, iterations, estim_error, hcurl_error
+        uh, ph, eta1, eta2, eta3, gamma, iterations, estim_error,
+        hcurl_error, rel_hcurl_error
     )
 
 
@@ -253,6 +263,7 @@ def _data_row(domain, result):
         "Num of Iters": result.num_iterations,
         "Estim Errors": result.estim_error,
         "Hcurl Errors": result.hcurl_error,
+        "rel Hcurl Errors": result.rel_hcurl_error,
     }
 
 
@@ -307,6 +318,7 @@ def _write_level(paths, experiment, run, level, domain, result):
                 "dof": result.uh.function_space.dofmap.index_map.size_global,
                 "estim_error": result.estim_error,
                 "hcurl_error": result.hcurl_error,
+                "rel_hcurl_error": result.rel_hcurl_error,
             }
         )
         append_csv_log(paths.csv, row)
@@ -423,6 +435,9 @@ def compute_reference_errors(
         str(reference_checkpoint),
         u_ref,
     )
+    reference_norm = calc_hcurl_norm(u_ref)
+    if reference_norm == 0.0:
+        raise ValueError("Reference solution has zero H(curl) norm.")
 
     for level in levels:
         checkpoint = paths.checkpoint(run.id, level)
@@ -442,6 +457,7 @@ def compute_reference_errors(
         adios4dolfinx.read_function(str(checkpoint), u_cur)
 
         hcurl_error = calc_hcurl_error(u_ref, u_cur, is_ref=True)
+        relative_hcurl_error = hcurl_error / reference_norm
         PETSc.Sys.Print(
             f"{run.id} level {level}: Hcurl error = {hcurl_error}"
         )
@@ -451,10 +467,20 @@ def compute_reference_errors(
                 _level_identity(experiment, run, level),
                 {"hcurl_error": hcurl_error},
             )
+            update_csv_log(
+                paths.csv,
+                _level_identity(experiment, run, level),
+                {"rel_hcurl_error": relative_hcurl_error},
+            )
             update_data_hcurl_error(
                 paths.data_csv(run.id),
                 level,
                 hcurl_error,
+            )
+            update_data_relative_hcurl_error(
+                paths.data_csv(run.id),
+                level,
+                relative_hcurl_error,
             )
 
 

@@ -110,6 +110,17 @@ def calc_hcurl_error(u, uh, is_ref=False, curl_u=None):
     return np.sqrt(global_error_sq)
 
 
+def calc_hcurl_norm(u, curl_u=None):
+    """Compute the global H(curl) norm of a field."""
+    curl_value = ufl.curl(u) if curl_u is None else curl_u
+    norm_form = fem.form(
+        (ufl.inner(curl_value, curl_value) + ufl.inner(u, u)) * ufl.dx
+    )
+    local_norm_sq = fem.assemble_scalar(norm_form)
+    global_norm_sq = u.function_space.mesh.comm.allreduce(local_norm_sq, op=MPI.SUM)
+    return np.sqrt(global_norm_sq)
+
+
 LOG_COLUMNS = [
     "name",
     "eg",
@@ -128,6 +139,7 @@ LOG_COLUMNS = [
     "dof",
     "estim_error",
     "hcurl_error",
+    "rel_hcurl_error",
 ]
 
 
@@ -183,6 +195,7 @@ DATA_COLUMNS = [
     "Num of Iters",
     "Estim Errors",
     "Hcurl Errors",
+    "rel Hcurl Errors",
 ]
 
 
@@ -200,4 +213,14 @@ def update_data_hcurl_error(csv_path, level, value):
             f"Level {level} is missing from {csv_path}."
         )
     data.loc[level, "Hcurl Errors"] = value
+    data.to_csv(csv_path, index=False)
+
+
+def update_data_relative_hcurl_error(csv_path, level, value):
+    data = pd.read_csv(csv_path)
+    if level >= len(data.index):
+        raise IndexError(f"Level {level} is missing from {csv_path}.")
+    if "rel Hcurl Errors" not in data.columns:
+        data["rel Hcurl Errors"] = np.nan
+    data.loc[level, "rel Hcurl Errors"] = value
     data.to_csv(csv_path, index=False)

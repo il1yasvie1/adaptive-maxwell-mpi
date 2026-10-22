@@ -21,27 +21,22 @@ def test_smoke_configuration_has_expected_runs():
     assert {run.id for run in config.runs} == {
         "uniform-regularized",
         "adaptive-regularized",
-        "uniform-mixed",
-        "adaptive-mixed",
     }
 
 
 def test_reference_configurations_match_legacy_parameters():
     root = Path(__file__).parents[1]
     expected = {
-        "n1-example1.yaml": ("1", 1, 1024.0, 144, 1 / 3, 5, 8),
-        "n2-example1.yaml": ("1", 2, 1024.0, 144, 1 / 3, 4, 13),
+        "n2-example1.yaml": ("1", 2, 1024.0, 192, 1 / 3, 5, 15),
         "n1-example2a.yaml": ("2a", 1, 1.0407, 384, 0.3604, 2, 15),
         "n2-example2a.yaml": ("2a", 2, 1.2349, 384, 0.3939, 2, 8),
         "n1-example2b.yaml": ("2b", 1, 1.1680, 384, 0.4697, 2, 15),
         "n2-example2b.yaml": ("2b", 2, 2.0238, 384, 0.5191, 2, 8),
     }
-    new_version = {"n1-example1.yaml", "n1-example3.yaml"}
+    new_version = {"n2-example1.yaml"}
     for filename, values in expected.items():
         config = load_config(root / "configs" / filename)
-        assert config.version == (
-            "new" if filename in new_version else "old"
-        )
+        assert config.version == ("new" if filename in new_version else "old")
         uniform = config.run(f"n{config.degree}-uniform")
         adaptive = config.run(f"n{config.degree}-adaptive")
         actual = (
@@ -58,15 +53,14 @@ def test_reference_configurations_match_legacy_parameters():
 
 def test_example3_reference_configuration():
     root = Path(__file__).parents[1]
-    config = load_config(root / "configs" / "n1-example3-reference.yaml")
+    config = load_config(root / "configs" / "n1-example3.yaml")
     assert config.example == "3"
     assert config.degree == 1
-    assert config.gamma0 == 512
-    assert config.n0 == 144
+    assert config.gamma0 == 256
+    assert config.n0 == 1152
     assert config.gamma_exponent == 1 / 3
-    assert config.run("n1-reference").levels == 4
-    assert config.run("n1-uniform").levels == 3
-    adaptive = config.run("n1-adaptive")
+    assert config.run("n1-uniform-self").levels == 5
+    adaptive = config.run("n1-adaptive-self")
     assert adaptive.levels == 15
     assert adaptive.theta12 == 0.3
     assert adaptive.theta3 == 0.3
