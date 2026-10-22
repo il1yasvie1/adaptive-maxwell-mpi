@@ -1,4 +1,4 @@
-name: n1-example3
+name: n1-example3-self
 version: new
 
 basic:
@@ -10,36 +10,51 @@ initialization:
   uniform_refinements: 1
 
 runs:
-  - id: n1-adaptive
-    strategy: adaptive
+  - id: n1-uniform-self
+    strategy: uniform
     levels: 5
+    formulation: regularized
+
+  - id: n1-adaptive-self
+    strategy: adaptive
+    levels: 15
     formulation: regularized
     marking:
-      theta12: 0.5
-      theta3: 0.5
-  
-  - id: n1-uniform
-    strategy: uniform
-    levels: 5
-    formulation: regularized
+      theta12: 0.3
+      theta3: 0.3
 
-  - id: n1-uniform-mixed
-    strategy: uniform
-    levels: 5
-    formulation: mixed
-
+  # - id: n1-uniform-mixed
+  #   strategy: uniform
+  #   levels: 5
+  #   formulation: mixed
 
 regularization:
-  gamma0: 512
-  n0: 144
+  gamma0: 256
+  n0: 1152
   mu: 0.3333333333333333
+
+# hcurl_errors:
+#   - reference:
+#       run: n1-uniform-mixed
+#       level: final
+#     targets:
+#       - run: n1-uniform
+#         levels: all
+#       - run: n1-adaptive
+#         levels: all
+
 
 hcurl_errors:
   - reference:
-      run: n1-uniform-mixed
+      run: n1-uniform-self
       level: final
     targets:
-      - run: n1-uniform
+      - run: n1-uniform-self
         levels: all
-      - run: n1-adaptive
+
+  - reference:
+      run: n1-adaptive-self
+      level: final
+    targets:
+      - run: n1-adaptive-self
         levels: all

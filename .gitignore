@@ -3,4 +3,4 @@ __pycache__/
 .ruff_cache/
 work/
 data/
-
+logs/

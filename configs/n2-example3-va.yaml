@@ -1,0 +1,38 @@
+name: n2-example3-va
+version: new
+
+basic:
+  eg: "3"
+  degree: 2
+  mesh_backend: netgen
+
+initialization:
+  uniform_refinements: 1
+
+runs:
+  - id: n2-adaptive-va
+    strategy: adaptive
+    levels: 21
+    formulation: regularized
+    marking:
+      theta12: 0.3
+      theta3: 0.3
+  - id: n2-uniform-va
+    strategy: uniform
+    levels: 5
+    formulation: regularized
+
+regularization:
+  gamma0: 512
+  n0: 144
+  mu: 0.3333333333333333
+
+hcurl_errors:
+  - reference:
+      run: n2-adaptive-va
+      level: final
+    targets:
+      - run: n2-uniform-va
+        levels: all
+      - run: n2-adaptive-va
+        levels: all

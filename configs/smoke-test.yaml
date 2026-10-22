@@ -23,18 +23,18 @@ runs:
       theta12: 0.3
       theta3: 0.3
 
-  - id: uniform-mixed
-    strategy: uniform
-    levels: 2
-    formulation: mixed
+  # - id: uniform-mixed
+  #   strategy: uniform
+  #   levels: 2
+  #   formulation: mixed
 
-  - id: adaptive-mixed
-    strategy: adaptive
-    levels: 2
-    formulation: mixed
-    marking:
-      theta12: 0.3
-      theta3: 0.3
+  # - id: adaptive-mixed
+  #   strategy: adaptive
+  #   levels: 2
+  #   formulation: mixed
+  #   marking:
+  #     theta12: 0.3
+  #     theta3: 0.3
 
 regularization:
   gamma0: 512
@@ -48,9 +48,10 @@ hcurl_errors:
     targets:
       - run: uniform-regularized
         levels: all
+
+  - reference:
+      run: adaptive-regularized
+      level: final
+    targets:
       - run: adaptive-regularized
-        levels: all
-      - run: uniform-mixed
-        levels: all
-      - run: adaptive-mixed
         levels: all

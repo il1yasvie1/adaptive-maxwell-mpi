@@ -1,17 +1,17 @@
 #!/bin/bash
 
-#SBATCH --job-name=smoke-test
+#SBATCH --job-name=n2-example3-va
 #SBATCH --mail-type=BEGIN,END,FAIL
 #SBATCH --mail-user=u3013241@connect.hku.hk
 #SBATCH --partition=intel
 #SBATCH --qos=normal
-#SBATCH --time=00:05:00
+#SBATCH --time=09:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks=4
+#SBATCH --ntasks=16
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
-#SBATCH --output=%x.out.%j
-#SBATCH --error=%x.err.%j
+#SBATCH --mem=128G
+#SBATCH --output=logs/%x.out.%j
+#SBATCH --error=logs/%x.err.%j
 
 set -e
 
@@ -33,7 +33,7 @@ mpirun -n "${SLURM_NTASKS}" \
     singularity exec -w "${SANDBOX_DIR}" \
     bash -c "
         cd '${PROJECT_DIR}'
-        python main.py run configs/smoke-test.yaml
+        python main.py run configs/n2-example3-va.yaml
     "
 
 echo "Job finish: $(date)"

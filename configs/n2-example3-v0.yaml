@@ -1,4 +1,4 @@
-name: n2-example3
+name: n2-example3-v0
 
 basic:
   eg: "3"
@@ -9,36 +9,36 @@ initialization:
   uniform_refinements: 1
 
 runs:
-  - id: n2-adaptive
-    strategy: adaptive
-    levels: 8
-    formulation: regularized
-    marking:
-      theta12: 0.5
-      theta3: 0.5
-  
   - id: n2-uniform
     strategy: uniform
     levels: 5
     formulation: regularized
 
-  - id: n2-uniform-mixed
-    strategy: uniform
-    levels: 5
-    formulation: mixed
-
+  # - id: n2-adaptive
+  #   strategy: adaptive
+  #   levels: 15
+  #   formulation: regularized
+  #   marking:
+  #     theta12: 0.3
+  #     theta3: 0.3
 
 regularization:
   gamma0: 512
-  n0: 144
+  n0: 192
   mu: 0.3333333333333333
 
 hcurl_errors:
   - reference:
-      run: n2-uniform-mixed
+      run: n2-uniform
       level: final
     targets:
       - run: n2-uniform
         levels: all
-      - run: n2-adaptive
-        levels: all
+
+# hcurl_errors:
+#   - reference:
+#       run: n2-adaptive
+#       level: final
+#     targets:
+#       - run: n2-adaptive
+#         levels: all

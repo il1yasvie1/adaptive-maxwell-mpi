@@ -7,18 +7,18 @@ basic:
 initialization:
   uniform_refinements: 1
 runs:
-  - id: n1-uniform
-    strategy: uniform
-    levels: 5
-    formulation: regularized
+  # - id: n1-uniform
+  #   strategy: uniform
+  #   levels: 5
+  #   formulation: regularized
   - id: n1-adaptive
     strategy: adaptive
-    levels: 8
+    levels: 15
     formulation: regularized
     marking:
       theta12: 0.5
       theta3: 0.5
 regularization:
   gamma0: 1024
-  n0: 144
+  n0: 192
   mu: 0.3333333333333333

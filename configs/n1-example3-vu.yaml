@@ -1,4 +1,5 @@
-name: n1-example3-reference
+name: n1-example3-vu
+version: new
 
 basic:
   eg: "3"
@@ -9,17 +10,12 @@ initialization:
   uniform_refinements: 1
 
 runs:
-  - id: n1-reference
+  - id: n1-uniform-vu
     strategy: uniform
-    levels: 4
+    levels: 5
     formulation: regularized
 
-  - id: n1-uniform
-    strategy: uniform
-    levels: 3
-    formulation: regularized
-
-  - id: n1-adaptive
+  - id: n1-adaptive-vu
     strategy: adaptive
     levels: 15
     formulation: regularized
@@ -34,10 +30,10 @@ regularization:
 
 hcurl_errors:
   - reference:
-      run: n1-reference
+      run: n1-uniform-vu
       level: final
     targets:
-      - run: n1-uniform
+      - run: n1-uniform-vu
         levels: all
-      - run: n1-adaptive
+      - run: n1-adaptive-vu
         levels: all
